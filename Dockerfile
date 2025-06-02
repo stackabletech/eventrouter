@@ -12,12 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Build stage
+FROM golang:1.21-alpine AS builder
+RUN apk add --no-cache git
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o eventrouter .
+
+# Final stage
 FROM alpine:3.9
-MAINTAINER Timothy St. Clair "tstclair@heptio.com"  
+MAINTAINER Timothy St. Clair "tstclair@heptio.com"
 
 WORKDIR /app
 RUN apk update --no-cache && apk add ca-certificates
-ADD eventrouter /app/
+COPY --from=builder /src/eventrouter /app/
 USER nobody:nobody
 
 CMD ["/bin/sh", "-c", "/app/eventrouter -v 3 -logtostderr"]
